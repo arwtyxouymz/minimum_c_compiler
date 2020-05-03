@@ -163,11 +163,13 @@ static Node *new_node_num(int val) {
 }
 
 // expr = mul ("+" mul | "-" mul)*
-// mul = primary ("*" primary | "/" primary)*
+// mul = unary ("*" unary | "/" unary)*
+// unary = ("+" | "-")? primary
 // primary = num | "(" expr ")"
 
 static Node *expr();
 static Node *mul();
+static Node *unary();
 static Node *primary();
 
 static Node *expr() {
@@ -184,16 +186,24 @@ static Node *expr() {
 }
 
 static Node *mul() {
-    Node *node = primary();
+    Node *node = unary();
 
     for (;;) {
         if (consume('*'))
-            node = new_binary(ND_MUL, node, primary());
+            node = new_binary(ND_MUL, node, unary());
         else if (consume('/'))
-            node = new_binary(ND_DIV, node, primary());
+            node = new_binary(ND_DIV, node, unary());
         else
             return node;
     }
+}
+
+static Node *unary() {
+    if (consume('+'))
+        return unary();
+    if (consume('-'))
+        return new_binary(ND_SUB, new_node_num(0), unary());
+    return primary();
 }
 
 static Node *primary() {
