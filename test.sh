@@ -50,4 +50,7 @@ assert 0 "1>=2;"
 
 assert 3 "1; 2; 3;"
 
+assert 3 "a=1; a+2;"
+assert 8 "a=3; z=5; a+z;"
+
 echo OK

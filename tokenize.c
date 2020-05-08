@@ -3,6 +3,13 @@
 char *user_input;
 Token *token;
 
+void error(char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, "\n");
+    exit(1);
+}
 
 // エラー箇所を報告する
 void error_at(char *loc, char *fmt, ...) {
@@ -26,6 +33,15 @@ bool consume(char *op) {
         return false;
     token = token->next;
     return true;
+}
+
+Token *consume_ident() {
+    if (token->kind != TK_IDENT) {
+        return NULL;
+    }
+    Token *t = token;
+    token = token->next;
+    return t;
 }
 
 // 次のトークンが期待している記号の時は，トークンを1つ読み進める．
@@ -76,6 +92,12 @@ Token *tokenize() {
         // Skip whitespace characters.
         if (isspace(*p)) {
             p++;
+            continue;
+        }
+
+        // Identifier
+        if ('a' <= *p && *p <= 'z') {
+            cur = new_token(TK_IDENT, cur, p++, 1);
             continue;
         }
 

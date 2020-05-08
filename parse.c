@@ -19,18 +19,26 @@ static Node *new_num(int val) {
     return node;
 }
 
+static Node *new_var_node(char name) {
+    Node *node = new_node(ND_VAR);
+    node->name = name;
+    return node;
+}
+
 // program    = stmt*
 // stmt       = expr ";"
-// expr       = equality
+// expr       = assign
+// assign     = equality ("=" assign)?
 // equality   = relational ("==" relational | "!=" relational)*
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 // add        = mul ("+" mul | "-" mul)*
 // mul        = unary ("*" unary | "/" unary)*
 // unary      = ("+" | "-")? primary
-// primary    = num | "(" expr ")"
+// primary    = num | ident | "(" expr ")"
 
 static Node *stmt();
 static Node *expr();
+static Node *assign();
 static Node *equality();
 static Node *relational();
 static Node *add();
@@ -56,9 +64,17 @@ static Node *stmt() {
     return node;
 }
 
-// expr       = equality
+// expr       = assign
 static Node *expr() {
-    return equality();
+    return assign();
+}
+
+// assign       = equality ("=" assign)?
+static Node *assign() {
+    Node *node = equality();
+    if (consume("="))
+        node = new_binary(ND_ASSIGN, node, assign());
+    return node;
 }
 
 // equality   = relational ("==" relational | "!=" relational)*
@@ -130,13 +146,18 @@ static Node *unary() {
     return primary();
 }
 
-// primary    = num | "(" expr ")"
+// primary    = num | ident | "(" expr ")"
 static Node *primary() {
     // 次のトークンが"("なら "(" expr ")" のはず
     if (consume("(")) {
         Node *node = expr();
         expect(")");
         return node;
+    }
+
+    Token *tok = consume_ident();
+    if (tok) {
+        return new_var_node(*tok->str);
     }
 
     // そうでなければ整数のはず
