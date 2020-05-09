@@ -1,5 +1,18 @@
 #include "9cc.h"
 
+
+// 全てのローカル変数はこのリストに蓄積されていく
+Var *locals;
+
+// ローカル変数を名前で見つける
+static Var *find_var(Token *tok) {
+    for (Var *var = locals; var; var = var->next)
+        if (strlen(var->name) == tok->len && !strncmp(tok->str, var->name, tok->len)) {
+            return var;
+        }
+    return NULL;
+}
+
 static Node *new_node(NodeKind kind) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
@@ -19,10 +32,18 @@ static Node *new_num(int val) {
     return node;
 }
 
-static Node *new_var_node(char name) {
+static Node *new_var_node(Var *var) {
     Node *node = new_node(ND_VAR);
-    node->name = name;
+    node->var = var;
     return node;
+}
+
+static Var *new_lvar(char *name) {
+    Var *var = calloc(1, sizeof(Var));
+    var->name = name;
+    var->next = locals;
+    locals = var;
+    return var;
 }
 
 // program    = stmt*
@@ -47,14 +68,20 @@ static Node *unary();
 static Node *primary();
 
 // program    = stmt*
-Node *program() {
+Function *program() {
+    locals = NULL;
+
     Node head = {};
     Node *cur = &head;
     while (!at_eof()) {
         cur->next = stmt();
         cur = cur->next;
     }
-    return head.next;
+
+    Function *prog = calloc(1, sizeof(Function));
+    prog->node = head.next;
+    prog->locals = locals;
+    return prog;
 }
 
 // stmt       = expr ";"
@@ -157,7 +184,11 @@ static Node *primary() {
 
     Token *tok = consume_ident();
     if (tok) {
-        return new_var_node(*tok->str);
+        Var *var = find_var(tok);
+        if (!var) {
+            var = new_lvar(strndup(tok->str, tok->len));
+        }
+        return new_var_node(var);
     }
 
     // そうでなければ整数のはず
