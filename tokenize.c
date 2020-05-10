@@ -103,6 +103,13 @@ Token *tokenize() {
             continue;
         }
 
+        // Keywords
+        if (startswith(p, "return") && !is_alnum(p[6])) {
+            cur = new_token(TK_RESERVED, cur, p, 6);
+            p += 6;
+            continue;
+        }
+
         // Identifier
         if (is_alpha(*p)) {
             char *q = p++;

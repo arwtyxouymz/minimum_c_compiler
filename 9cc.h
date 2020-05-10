@@ -70,6 +70,7 @@ typedef enum {
     ND_LE,     // <=
     ND_ASSIGN, // =
     ND_VAR,    // 変数
+    ND_RETURN, // return
     ND_NUM,    // 整数
 } NodeKind;
 

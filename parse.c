@@ -26,6 +26,12 @@ static Node *new_binary(NodeKind kind, Node *lhs, Node *rhs) {
     return node;
 }
 
+static Node *new_unary(NodeKind kind, Node *expr) {
+    Node *node = new_node(kind);
+    node->lhs = expr;
+    return node;
+}
+
 static Node *new_num(int val) {
     Node *node = new_node(ND_NUM);
     node->val = val;
@@ -48,6 +54,7 @@ static Var *new_lvar(char *name) {
 
 // program    = stmt*
 // stmt       = expr ";"
+//                | "return" expr ";"
 // expr       = assign
 // assign     = equality ("=" assign)?
 // equality   = relational ("==" relational | "!=" relational)*
@@ -85,9 +92,18 @@ Function *program() {
 }
 
 // stmt       = expr ";"
+//                | "return" expr ";"
 static Node *stmt() {
-    Node *node = expr();
+    Node *node;
+
+    if (consume("return")) {
+        node = new_unary(ND_RETURN, expr());
+    } else {
+        node = expr();
+    }
+
     expect(";");
+
     return node;
 }
 

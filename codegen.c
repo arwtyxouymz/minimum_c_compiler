@@ -35,6 +35,11 @@ static void gen(Node *node) {
             gen(node->rhs);
             store();
             return;
+        case ND_RETURN:
+            gen(node->lhs);
+            printf("  pop rax\n");
+            printf("  jmp .L.return\n");
+            return;
     }
 
     gen(node->lhs);
@@ -99,6 +104,7 @@ void codegen(Function *prog) {
     }
 
     // エピローグ
+    printf(".L.return:\n");
     printf("  mov rsp, rbp\n");
     printf("  pop rbp\n");
     printf("  ret\n");
