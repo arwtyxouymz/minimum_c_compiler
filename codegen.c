@@ -22,6 +22,7 @@ static void store() {
 }
 
 static void gen(Node *node) {
+    // statement 系
     switch (node->kind) {
         case ND_NUM:
             printf("  push %d\n", node->val);
@@ -34,6 +35,10 @@ static void gen(Node *node) {
             gen_addr(node->lhs);
             gen(node->rhs);
             store();
+            return;
+        case ND_EXPR_STMT:
+            gen(node->lhs);
+            printf("  add rsp, 8\n");
             return;
         case ND_RETURN:
             gen(node->lhs);
@@ -48,6 +53,7 @@ static void gen(Node *node) {
     printf("  pop rdi\n");
     printf("  pop rax\n");
 
+    // expression 系
     switch (node->kind) {
         case ND_ADD:
             printf("  add rax, rdi\n");
@@ -98,10 +104,8 @@ void codegen(Function *prog) {
     printf("  sub rsp, %d\n", prog->stack_size);
 
     // 抽象構文木を降りながらコード生成
-    for (Node *node = prog->node; node; node = node->next) {
+    for (Node *node = prog->node; node; node = node->next)
         gen(node);
-        printf("  pop rax\n");
-    }
 
     // エピローグ
     printf(".L.return:\n");
