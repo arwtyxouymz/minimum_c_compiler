@@ -73,6 +73,7 @@ typedef enum {
     ND_RETURN,    // return
     ND_EXPR_STMT, // 式文
     ND_IF,        // if文
+    ND_WHILE,     // while文
     ND_NUM,       // 整数
 } NodeKind;
 
@@ -84,7 +85,7 @@ struct Node {
     Node *lhs;     // 左辺
     Node *rhs;     // 右辺
 
-    /* if 文の時に使う */
+    /* if文 or while文 の時に使う */
     Node *cond;
     Node *then;
     Node *els;
