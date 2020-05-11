@@ -54,7 +54,8 @@ static Var *new_lvar(char *name) {
 
 // program    = stmt*
 // stmt       = expr ";"
-//                | "return" expr ";"
+//            | "return" expr ";"
+//            | "if" "(" expr ")" stmt ("else" stmt)?
 // expr       = assign
 // assign     = equality ("=" assign)?
 // equality   = relational ("==" relational | "!=" relational)*
@@ -91,17 +92,34 @@ Function *program() {
     return prog;
 }
 
+static Node *read_expr_stmt() {
+    return new_unary(ND_EXPR_STMT, expr());
+}
+
 // stmt       = expr ";"
-//                | "return" expr ";"
+//            | "return" expr ";"
+//            | "if" "(" expr ")" stmt ("else" stmt)?
 static Node *stmt() {
     Node *node;
 
     if (consume("return")) {
         node = new_unary(ND_RETURN, expr());
-    } else {
-        node = new_unary(ND_EXPR_STMT, expr());
+        expect(";");
+        return node;
     }
 
+    if (consume("if")) {
+        Node *node = new_node(ND_IF);
+        expect("(");
+        node->cond = expr();
+        expect(")");
+        node->then = stmt();
+        if (consume("else"))
+            node->els = stmt();
+        return node;
+    }
+
+    node = read_expr_stmt();
     expect(";");
 
     return node;
