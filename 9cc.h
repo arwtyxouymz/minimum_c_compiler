@@ -74,6 +74,7 @@ typedef enum {
     ND_EXPR_STMT, // 式文
     ND_IF,        // if文
     ND_WHILE,     // while文
+    ND_FOR,       // for文
     ND_NUM,       // 整数
 } NodeKind;
 
@@ -85,10 +86,12 @@ struct Node {
     Node *lhs;     // 左辺
     Node *rhs;     // 右辺
 
-    /* if文 or while文 の時に使う */
+    /* if文 or while文 or for文 の時に使う */
     Node *cond;
     Node *then;
     Node *els;
+    Node *init;
+    Node *inc;
     
     Var *var;      // kindがND_VARの時に使う
     int val;       // kindがND_NUMの場合のみ使う

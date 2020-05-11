@@ -57,6 +57,7 @@ static Var *new_lvar(char *name) {
 //            | "return" expr ";"
 //            | "if" "(" expr ")" stmt ("else" stmt)?
 //            | "while" "(" expr ")" stmt
+//            | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 // expr       = assign
 // assign     = equality ("=" assign)?
 // equality   = relational ("==" relational | "!=" relational)*
@@ -101,6 +102,7 @@ static Node *read_expr_stmt() {
 //            | "return" expr ";"
 //            | "if" "(" expr ")" stmt ("else" stmt)?
 //            | "while" "(" expr ")" stmt
+//            | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 static Node *stmt() {
     Node *node;
 
@@ -126,6 +128,25 @@ static Node *stmt() {
         expect("(");
         node->cond = expr();
         expect(")");
+        node->then = stmt();
+        return node;
+    }
+
+    if (consume("for")) {
+        node = new_node(ND_FOR);
+        expect("(");
+        if (!consume(";")) {
+            node->init = read_expr_stmt();
+            expect(";");
+        }
+        if (!consume(";")) {
+            node->cond = expr();
+            expect(";");
+        }
+        if (!consume(")")) {
+            node->inc = read_expr_stmt();
+            expect(")");
+        }
         node->then = stmt();
         return node;
     }
