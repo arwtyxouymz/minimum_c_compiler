@@ -63,6 +63,16 @@ long expect_number() {
     return val;
 }
 
+// 次のトークンがIdentifierの場合，トークンを1つ読み進めてその数値を返す
+// それ以外の場合にはエラーを報告する
+char *expect_ident() {
+    if (token->kind != TK_IDENT)
+        error_at(token->str, "expected an identifier");
+    char *s = strndup(token->str, token->len);
+    token = token->next;
+    return s;
+}
+
 bool at_eof() {
     return token->kind == TK_EOF;
 }

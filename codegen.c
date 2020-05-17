@@ -1,7 +1,9 @@
 #include "9cc.h"
 
-static int labelseq = 1;
 static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
+static int labelseq = 1;
+static char *funcname;
 
 static void gen_addr(Node *node) {
     if (node->kind != ND_VAR) {
@@ -133,7 +135,7 @@ static void gen(Node *node) {
         case ND_RETURN:
             gen(node->lhs);
             printf("  pop rax\n");
-            printf("  jmp .L.return\n");
+            printf("  jmp .L.return.%s\n", funcname);
             return;
     }
 
@@ -185,21 +187,26 @@ static void gen(Node *node) {
 void codegen(Function *prog) {
     // アセンブリの前半部分を出力
     printf(".intel_syntax noprefix\n");
-    printf(".global _main\n");
-    printf("_main:\n");
 
-    // プロローグ
-    printf("  push rbp\n");
-    printf("  mov rbp, rsp\n");
-    printf("  sub rsp, %d\n", prog->stack_size);
+    for (Function *fn = prog; fn; fn = fn->next) {
+        printf(".global _%s\n", fn->name);
+        printf("_%s:\n", fn->name);
+        funcname = fn->name;
 
-    // 抽象構文木を降りながらコード生成
-    for (Node *node = prog->node; node; node = node->next)
-        gen(node);
+        // プロローグ
+        printf("  push rbp\n");
+        printf("  mov rbp, rsp\n");
+        printf("  sub rsp, %d\n", fn->stack_size);
 
-    // エピローグ
-    printf(".L.return:\n");
-    printf("  mov rsp, rbp\n");
-    printf("  pop rbp\n");
-    printf("  ret\n");
+        // 抽象構文木をを降りながらコード生成
+        for (Node *node = fn->node; node; node = node->next)
+            gen(node);
+
+        // エピローグ
+        printf(".L.return.%s:\n", funcname);
+        printf("  mov rsp, rbp\n");
+        printf("  pop rbp\n");
+
+        printf("  ret\n");
+    }
 }
