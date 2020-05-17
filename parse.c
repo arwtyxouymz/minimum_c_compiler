@@ -77,6 +77,7 @@ static Node *relational();
 static Node *add();
 static Node *mul();
 static Node *unary();
+static Node *func_args();
 static Node *primary();
 
 // program    = stmt*
@@ -255,8 +256,23 @@ static Node *unary() {
     return primary();
 }
 
-// primary    = num | ident args?  | "(" expr ")"
-// args       = "(" ")"
+// func-args = "(" (assign ("," assign)*)? ")"
+static Node *func_args() {
+    if (consume(")")) {
+        return NULL;
+    }
+
+    Node *head = assign();
+    Node *cur = head;
+    while (consume(",")) {
+        cur->next = assign();
+        cur = cur->next;
+    }
+    expect(")");
+    return head;
+}
+
+// primary    = num | ident func-args?  | "(" expr ")"
 static Node *primary() {
     // 次のトークンが"("なら "(" expr ")" のはず
     if (consume("(")) {
@@ -269,9 +285,9 @@ static Node *primary() {
     if (tok) {
         // 関数呼び出し
         if (consume("(")) {
-            expect(")");
             Node *node = new_node(ND_FUNCALL);
             node->funcname = strndup(tok->str, tok->len);
+            node->args = func_args();
             return node;
         }
 
