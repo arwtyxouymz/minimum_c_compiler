@@ -66,7 +66,8 @@ static Var *new_lvar(char *name) {
 // add        = mul ("+" mul | "-" mul)*
 // mul        = unary ("*" unary | "/" unary)*
 // unary      = ("+" | "-")? primary
-// primary    = num | ident | "(" expr ")"
+// primary    = num | ident args?  | "(" expr ")"
+// args       = "(" ")"
 
 static Node *stmt();
 static Node *expr();
@@ -254,7 +255,8 @@ static Node *unary() {
     return primary();
 }
 
-// primary    = num | ident | "(" expr ")"
+// primary    = num | ident args?  | "(" expr ")"
+// args       = "(" ")"
 static Node *primary() {
     // 次のトークンが"("なら "(" expr ")" のはず
     if (consume("(")) {
@@ -265,6 +267,15 @@ static Node *primary() {
 
     Token *tok = consume_ident();
     if (tok) {
+        // 関数呼び出し
+        if (consume("(")) {
+            expect(")");
+            Node *node = new_node(ND_FUNCALL);
+            node->funcname = strndup(tok->str, tok->len);
+            return node;
+        }
+
+        // 変数
         Var *var = find_var(tok);
         if (!var) {
             var = new_lvar(strndup(tok->str, tok->len));
