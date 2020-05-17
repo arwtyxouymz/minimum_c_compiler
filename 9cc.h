@@ -51,13 +51,15 @@ extern char *user_input;
 
 typedef struct Var Var;
 struct Var {
-    Var *next; // 次の変数がNULL
     char *name; // 変数の名前
     int offset; // RBPからのオフセット
 };
 
-// ローカル変数
-Var *locals;
+typedef struct VarList VarList;
+struct VarList {
+    VarList *next;
+    Var *var;
+};
 
 // AST node
 typedef enum {
@@ -111,8 +113,10 @@ typedef struct Function Function;
 struct Function {
     Function *next;
     char *name;
+    VarList *params;
+
     Node *node;
-    Var *locals;
+    VarList *locals;
     int stack_size;
 };
 
