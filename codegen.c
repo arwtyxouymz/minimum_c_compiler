@@ -7,7 +7,7 @@ static char *funcname;
 
 static void gen_addr(Node *node) {
     if (node->kind != ND_VAR) {
-        error("代入の左辺値が変数ではありません");
+        error_tok(node->tok, "代入の左辺値が変数ではありません");
     }
     printf("  lea rax, [rbp-%d]\n", node->var->offset);
     printf("  push rax\n");
