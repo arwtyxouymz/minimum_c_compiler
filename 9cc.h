@@ -81,6 +81,8 @@ typedef enum {
     ND_FOR,       // for文
     ND_BLOCK,     // Block
     ND_FUNCALL,   // 関数呼び出し
+    ND_ADDR,      // アドレス
+    ND_DEREF,     // 参照外し
     ND_NUM,       // 整数
 } NodeKind;
 

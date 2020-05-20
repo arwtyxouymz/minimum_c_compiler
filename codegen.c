@@ -5,12 +5,19 @@ static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 static int labelseq = 1;
 static char *funcname;
 
+static void gen(Node *node);
+
 static void gen_addr(Node *node) {
-    if (node->kind != ND_VAR) {
-        error_tok(node->tok, "代入の左辺値が変数ではありません");
+    switch (node->kind) {
+        case ND_VAR:
+            printf("  lea rax, [rbp-%d]\n", node->var->offset);
+            printf("  push rax\n");
+            return;
+        case ND_DEREF:
+            gen(node->lhs);
+            return;
+
     }
-    printf("  lea rax, [rbp-%d]\n", node->var->offset);
-    printf("  push rax\n");
 }
 
 static void load() {
@@ -132,6 +139,15 @@ static void gen(Node *node) {
             printf("  push rax\n");
             return;
         }
+        case ND_ADDR:
+            gen_addr(node->lhs);
+            return;
+        case ND_DEREF:
+            gen(node->lhs);
+            printf("  pop rax\n");
+            printf("  mov rax, [rax]\n");
+            printf("  push rax\n");
+            return;
         case ND_RETURN:
             gen(node->lhs);
             printf("  pop rax\n");

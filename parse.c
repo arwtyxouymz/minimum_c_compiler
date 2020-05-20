@@ -73,7 +73,10 @@ static Var *new_lvar(char *name) {
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 // add        = mul ("+" mul | "-" mul)*
 // mul        = unary ("*" unary | "/" unary)*
-// unary      = ("+" | "-")? primary
+// unary      = "+"? primary
+//            | "-"? primary
+//            | "*" unary
+//            | "&" unary
 // primary    = num | ident args?  | "(" expr ")"
 // args       = "(" ")"
 
@@ -297,13 +300,20 @@ static Node *mul() {
     }
 }
 
-// unary      = ("+" | "-")? primary
+// unary      = "+"? primary
+//            | "-"? primary
+//            | "*" unary
+//            | "&" unary
 static Node *unary() {
     Token *tok;
     if ((tok = consume("+")))
         return unary();
     if ((tok = consume("-")))
         return new_binary(ND_SUB, new_num(0, tok), unary(), tok);
+    if ((tok = consume("*")))
+        return new_unary(ND_DEREF, unary(), tok);
+    if ((tok = consume("&")))
+        return new_unary(ND_ADDR, unary(), tok);
     return primary();
 }
 
