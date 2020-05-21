@@ -34,6 +34,7 @@ struct Token {
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
 void error_tok(Token *tok, char *fmt, ...);
+Token *peek(char *s);
 Token *consume(char *op);
 Token *consume_ident();
 void expect(char *op);
@@ -56,6 +57,7 @@ typedef struct Var Var;
 struct Var {
     char *name; // 変数の名前
     int offset; // RBPからのオフセット
+    Type *ty;   // Type
 };
 
 typedef struct VarList VarList;
@@ -89,6 +91,7 @@ typedef enum {
     ND_ADDR,      // アドレス
     ND_DEREF,     // 参照外し
     ND_NUM,       // 整数
+    ND_NULL,      // NULL
 } NodeKind;
 
 typedef struct Node Node;
@@ -142,7 +145,10 @@ struct Type {
     Type *base;
 };
 
+extern Type *int_type;
+
 bool is_integer(Type *ty);
+Type *pointer_to(Type *base);
 void add_type(Node *node);
 
 //

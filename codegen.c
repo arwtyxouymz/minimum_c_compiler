@@ -36,6 +36,8 @@ static void store() {
 static void gen(Node *node) {
     // statement 系
     switch (node->kind) {
+        case ND_NULL:
+            return;
         case ND_NUM:
             printf("  push %d\n", node->val);
             return;
