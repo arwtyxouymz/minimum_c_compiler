@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -138,17 +139,20 @@ Function *program();
 //
 //typing.c
 //
-typedef enum { TY_INT, TY_PTR } TypeKind;
+typedef enum { TY_INT, TY_PTR, TY_ARRAY } TypeKind;
 
 struct Type {
     TypeKind kind;
-    Type *base;
+    int      size;      // sizeof()の時に使う
+    Type     *base;
+    size_t   array_len; // 配列の時に使う
 };
 
 extern Type *int_type;
 
 bool is_integer(Type *ty);
 Type *pointer_to(Type *base);
+Type *array_of(Type *base, int size);
 void add_type(Node *node);
 
 //

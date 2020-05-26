@@ -17,8 +17,9 @@ int main(int argc, char **argv)
         // ローカル変数にオフセットを設定する
         int offset = 0;
         for (VarList *vl = fn->locals; vl; vl = vl->next) {
-            offset += 8;
-            vl->var->offset = offset;
+            Var *var = vl->var;
+            offset += var->ty->size;
+            var->offset = offset;
         }
         fn->stack_size = offset;
     }
