@@ -77,10 +77,9 @@ static Var *new_lvar(char *name, Type *ty) {
 // relational  = add ("<" add | "<=" add | ">" add | ">=" add)*
 // add         = mul ("+" mul | "-" mul)*
 // mul         = unary ("*" unary | "/" unary)*
-// unary       = "+"? primary
-//             | "-"? primary
-//             | "*" unary
-//             | "&" unary
+// unary       = ("+", "-", "*", "&")? unary
+//             | postfix
+// postfix     = primary ("[" expr "]")*
 // primary     = num | ident args?  | "(" expr ")"
 // args        = "(" ")"
 
@@ -95,6 +94,7 @@ static Node *relational();
 static Node *add();
 static Node *mul();
 static Node *unary();
+static Node *postfix();
 static Node *func_args();
 static Node *primary();
 
@@ -398,10 +398,8 @@ static Node *mul() {
     }
 }
 
-// unary      = "+"? primary
-//            | "-"? primary
-//            | "*" unary
-//            | "&" unary
+// unary      = ("+", "-", "*", "&")? unary
+//            | postfix
 static Node *unary() {
     Token *tok;
     if ((tok = consume("+")))
@@ -412,7 +410,21 @@ static Node *unary() {
         return new_unary(ND_DEREF, unary(), tok);
     if ((tok = consume("&")))
         return new_unary(ND_ADDR, unary(), tok);
-    return primary();
+    return postfix();
+}
+
+// postfix     = primary ("[" expr "]")*
+static Node *postfix() {
+    Node *node = primary();
+    Token *tok;
+
+    while ((tok = consume("["))) {
+        // x[y] is short for *(x+y)
+        Node *exp = new_add(node, expr(), tok);
+        expect("]");
+        node = new_unary(ND_DEREF, exp, tok);
+    }
+    return node;
 }
 
 // func-args = "(" (assign ("," assign)*)? ")"

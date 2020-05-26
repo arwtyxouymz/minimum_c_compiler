@@ -46,7 +46,11 @@ static void gen(Node *node) {
         case ND_NULL:
             return;
         case ND_NUM:
-            printf("  push %d\n", node->val);
+            printf("  push %ld\n", node->val);
+            return;
+        case ND_EXPR_STMT:
+            gen(node->lhs);
+            printf("  add rsp, 8\n");
             return;
         case ND_VAR:
             gen_addr(node);
@@ -58,12 +62,15 @@ static void gen(Node *node) {
             gen(node->rhs);
             store();
             return;
-        case ND_EXPR_STMT:
-            gen(node->lhs);
-            printf("  add rsp, 8\n");
+        case ND_ADDR:
+            gen_addr(node->lhs);
             return;
-        case ND_IF:
-        {
+        case ND_DEREF:
+            gen(node->lhs);
+            if (node->ty->kind != TY_ARRAY)
+                load();
+            return;
+        case ND_IF: {
             int seq = labelseq++;
             if (node->els) {
                 gen(node->cond);
@@ -85,8 +92,7 @@ static void gen(Node *node) {
             }
             return;
         }
-        case ND_WHILE:
-        {
+        case ND_WHILE: {
             int seq = labelseq++;
             printf(".L.begin.while.%d:\n", seq);
             gen(node->cond);
@@ -98,8 +104,7 @@ static void gen(Node *node) {
             printf(".L.end.while.%d:\n", seq);
             return;
         }
-        case ND_FOR:
-        {
+        case ND_FOR: {
             int seq = labelseq++;
             if (node->init)
                 gen(node->init);
@@ -121,8 +126,7 @@ static void gen(Node *node) {
             for (Node *n = node->body; n; n = n->next)
                 gen(n);
             return;
-        case ND_FUNCALL:
-        {
+        case ND_FUNCALL: {
             int nargs = 0;
             for (Node *arg = node->args; arg; arg = arg->next) {
                 gen(arg);
@@ -149,14 +153,6 @@ static void gen(Node *node) {
             printf("  push rax\n");
             return;
         }
-        case ND_ADDR:
-            gen_addr(node->lhs);
-            return;
-        case ND_DEREF:
-            gen(node->lhs);
-            if (node->ty->kind != TY_ARRAY)
-                load();
-            return;
         case ND_RETURN:
             gen(node->lhs);
             printf("  pop rax\n");
