@@ -54,11 +54,15 @@ extern char *user_input;
 // parse.c
 //
 
+// 変数
 typedef struct Var Var;
 struct Var {
-    char *name; // 変数の名前
-    int offset; // RBPからのオフセット
-    Type *ty;   // Type
+    char *name;    // 変数の名前
+    Type *ty;      // Type
+    bool is_local; // Local変数かGlobal変数か
+
+    // ローカル変数
+    int  offset;   // RBPからのオフセット
 };
 
 typedef struct VarList VarList;
@@ -134,7 +138,12 @@ struct Function {
     int stack_size;
 };
 
-Function *program();
+typedef struct {
+    VarList *globals;
+    Function *fns;
+} Program;
+
+Program *program();
 
 //
 //typing.c
@@ -158,4 +167,4 @@ void add_type(Node *node);
 //
 // codegen.c
 //
-void codegen(Function *prog);
+void codegen(Program *prog);
