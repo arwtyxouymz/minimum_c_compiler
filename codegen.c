@@ -142,12 +142,12 @@ static void gen(Node *node) {
             printf("  and rax, 15\n");
             printf("  jnz .L.call.%d\n", seq);
             printf("  mov rax, 0\n");
-            printf("  call _%s\n", node->funcname);
+            printf("  call %s\n", node->funcname);
             printf("  jmp .L.end.%d\n", seq);
             printf(".L.call.%d:\n", seq);
             printf("  sub rsp, 8\n");
             printf("  mov rax, 0\n");
-            printf("  call _%s\n", node->funcname);
+            printf("  call %s\n", node->funcname);
             printf("  add rsp, 8\n");
             printf(".L.end.%d:\n", seq);
             printf("  push rax\n");
@@ -224,8 +224,8 @@ void codegen(Function *prog) {
     printf(".intel_syntax noprefix\n");
 
     for (Function *fn = prog; fn; fn = fn->next) {
-        printf(".global _%s\n", fn->name);
-        printf("_%s:\n", fn->name);
+        printf(".global %s\n", fn->name);
+        printf("%s:\n", fn->name);
         funcname = fn->name;
 
         // プロローグ
