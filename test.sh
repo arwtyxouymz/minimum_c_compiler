@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 cat <<EOF | cc -xc -c -o tmp2.o -
 int ret3() { return 3; }
@@ -16,7 +16,7 @@ assert()
     expected="$1"
     input="$2"
 
-    ./9cc "$input" > tmp.s
+    ./9cc <(echo "$input") > tmp.s
     cc -static -o tmp tmp.s tmp2.o
     ./tmp
     actual="$?"
