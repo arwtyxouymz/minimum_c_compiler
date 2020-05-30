@@ -96,6 +96,7 @@ typedef enum {
     ND_VAR,       // 変数
     ND_RETURN,    // return
     ND_EXPR_STMT, // 式文
+    ND_STMT_EXPR, // 文式?
     ND_IF,        // if文
     ND_WHILE,     // while文
     ND_FOR,       // for文
@@ -124,7 +125,7 @@ struct Node {
     Node *init;
     Node *inc;
 
-    /* Block の時に使う */
+    /* Block もしくは 文式 の時に使う */
     Node *body;
 
     /* 関数呼び出しの時に使う */
