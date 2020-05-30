@@ -90,42 +90,47 @@ static char *new_label() {
     return strndup(buf, 20);
 }
 
-// program     = (global-var | function)*
-// global-var  = basetype ident ("[" num "]")* ";"
-// function    = basetype ident "(" params? ")" "{" stmt* "}"
-// params      = param ("," param)*
-// param       = basetype ident
-// stmt2       = expr ";"
-//             | "return" expr ";"
-//             | "{" stmt* "}"
-//             | "if" "(" expr ")" stmt ("else" stmt)?
-//             | "while" "(" expr ")" stmt
-//             | "for" "(" expr? ";" expr? ";" expr? ")" stmt
-//             | declaration
-// declaration = basetype ident ("[" num "]")* ("=" expr) ";"
-// basetype    = ("char" | "int") "*"*
-// expr        = assign
-// assign      = equality ("=" assign)?
-// equality    = relational ("==" relational | "!=" relational)*
-// relational  = add ("<" add | "<=" add | ">" add | ">=" add)*
-// add         = mul ("+" mul | "-" mul)*
-// mul         = unary ("*" unary | "/" unary)*
-// unary       = ("+", "-", "*", "&")? unary
-//             | postfix
-// postfix     = primary ("[" expr "]")*
-// primary     = "(" "{" stmt-expr-tail
-//             | "(" expr ")"
-//             | "sizeof" unary
-//             | ident func-args?
-//             | str
-//             | num
-// args        = "(" ident ("," ident)* ")"
-// stmt-expr = "(" "{" stmt stmt* "}" ")"
+// program       = (global-var | function)*
+// global-var    = basetype ident ("[" num "]")* ";"
+// function      = basetype ident "(" params? ")" "{" stmt* "}"
+// params        = param ("," param)*
+// param         = basetype ident
+// stmt2         = expr ";"
+//               | "return" expr ";"
+//               | "{" stmt* "}"
+//               | "if" "(" expr ")" stmt ("else" stmt)?
+//               | "while" "(" expr ")" stmt
+//               | "for" "(" expr? ";" expr? ";" expr? ")" stmt
+//               | declaration
+// declaration   = basetype ident ("[" num "]")* ("=" expr) ";"
+// basetype      = ("char" | "int" | struct-decl) "*"*
+// struct-decl   = "struct" "{" struct-member "}"
+// struct-member = basetype ident ("[" num "]")* ";"
+// expr          = assign
+// assign        = equality ("=" assign)?
+// equality      = relational ("==" relational | "!=" relational)*
+// relational    = add ("<" add | "<=" add | ">" add | ">=" add)*
+// add           = mul ("+" mul | "-" mul)*
+// mul           = unary ("*" unary | "/" unary)*
+// unary         = ("+", "-", "*", "&")? unary
+//               | postfix
+// postfix       = primary ("[" expr "]")*
+// primary       = "(" "{" stmt-expr-tail
+//               | "(" expr ")"
+//               | "sizeof" unary
+//               | ident func-args?
+//               | str
+//               | num
+// args          = "(" ident ("," ident)* ")"
+// stmt-expr     = "(" "{" stmt stmt* "}" ")"
 
 static Function *function();
 static Type *basetype();
+static Type *struct_decl();
+static Member *struct_member();
 static void global_var();
 static Node *declaration();
+static bool is_typename();
 static Node *stmt();
 static Node *stmt2();
 static Node *expr();
@@ -169,15 +174,19 @@ Program *program() {
     return prog;
 }
 
-// basetype    = ("char" | "int") "*"*
+// basetype    = ("char" | "int" | struct-decl) "*"*
 static Type *basetype() {
-    Type *ty;
-    if (consume("char")) {
-        ty = char_type;
-    } else {
-        expect("int");
-        ty = int_type;
+    if (!is_typename(token)) {
+        error_tok(token, "typename expected");
     }
+
+    Type *ty;
+    if (consume("char"))
+        ty = char_type;
+    else if (consume("int"))
+        ty = int_type;
+    else
+        ty = struct_decl();
 
     while (consume("*"))
         ty = pointer_to(ty);
@@ -191,6 +200,45 @@ static Type *read_type_suffix(Type *base) {
     expect("]");
     base = read_type_suffix(base);
     return array_of(base, sz);
+}
+
+// struct-decl = "struct" "{" struct-member "}"
+static Type *struct_decl() {
+    // Read struct members
+    expect("struct");
+    expect("{");
+
+    Member head = {};
+    Member *cur = &head;
+
+    while (!consume("}")) {
+        cur->next = struct_member();
+        cur = cur->next;
+    }
+
+    Type *ty = calloc(1, sizeof(Type));
+    ty->kind = TY_STRUCT;
+    ty->members = head.next;
+
+    // Assign offsets within the struct to members
+    int offset = 0;
+    for (Member *mem = ty->members; mem; mem = mem->next) {
+        mem->offset = offset;
+        offset += mem->ty->size;
+    }
+    ty->size = offset;
+
+    return ty;
+}
+
+// struct-member = basetype ident ("[" num "]")* ";"
+static Member *struct_member() {
+    Member *mem = calloc(1, sizeof(Member));
+    mem->ty = basetype();
+    mem->name = expect_ident();
+    mem->ty = read_type_suffix(mem->ty);
+    expect(";");
+    return mem;
 }
 
 // param      = basetype ident
@@ -283,7 +331,7 @@ static Node *read_expr_stmt() {
 }
 
 static bool is_typename() {
-    return peek("char") || peek("int");
+    return peek("char") || peek("int") || peek("struct");
 }
 
 static Node *stmt() {
@@ -497,18 +545,50 @@ static Node *unary() {
     return postfix();
 }
 
-// postfix     = primary ("[" expr "]")*
+static Member *find_member(Type *ty, char *name) {
+    for (Member *mem = ty->members; mem; mem = mem->next)
+        if (!strcmp(mem->name, name))
+            return mem;
+    return NULL;
+}
+
+static Node *struct_ref(Node *lhs) {
+    add_type(lhs);
+    if (lhs->ty->kind != TY_STRUCT)
+        error_tok(lhs->tok, "not a struct");
+
+    Token *tok = token;
+    Member *mem = find_member(lhs->ty, expect_ident());
+    if (!mem)
+        error_tok(tok, "no such member");
+
+    Node *node = new_unary(ND_MEMBER, lhs, tok);
+    node->member = mem;
+
+    return node;
+}
+
+// postfix     = primary ("[" expr "]" | "." ident)*
 static Node *postfix() {
     Node *node = primary();
     Token *tok;
 
-    while ((tok = consume("["))) {
-        // x[y] is short for *(x+y)
-        Node *exp = new_add(node, expr(), tok);
-        expect("]");
-        node = new_unary(ND_DEREF, exp, tok);
+    for (;;) {
+        if ((tok = consume("["))) {
+            // x[y] is short for *(x + y)
+            Node *exp = new_add(node, expr(), tok);
+            expect("]");
+            node = new_unary(ND_DEREF, exp, tok);
+            continue;
+        }
+
+        if ((tok = consume("."))) {
+            node = struct_ref(node);
+            continue;
+        }
+
+        return node;
     }
-    return node;
 }
 
 // stmt-expr = "(" "{" stmt stmt* "}" ")"
